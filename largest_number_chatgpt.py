@@ -36,7 +36,6 @@ for epoch in range(200):
     optimizer.zero_grad()
     out = model(X)
     loss = criterion(out, y)
-    print(torch.argmax(out, dim=1))
     loss.backward()
     optimizer.step()
 
