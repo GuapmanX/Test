@@ -11,6 +11,7 @@ X = torch.from_numpy(X_numpy.astype(np.float32))
 Y = torch.from_numpy(Y_numpy.astype(np.float32))
 Y = Y.view(Y.shape[0], 1)
 
+
 n_samples, n_features = X.shape
 #1)model
 input_size = n_features

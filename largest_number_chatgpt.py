@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 
 # Parameters
-input_size = 10  # size of each array
+input_size = 3  # size of each array
 hidden_size = 32
 num_classes = input_size
 
@@ -40,3 +40,7 @@ for epoch in range(200):
     optimizer.step()
 
 print("Training done.")
+
+
+newData = torch.tensor([1.0,32.0,12.0])
+print(torch.argmax(model(newData)).item())
