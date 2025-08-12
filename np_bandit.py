@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 class MultiArmedBandit():
     def __init__(self,n_arms,epsilon):
@@ -18,20 +19,3 @@ class MultiArmedBandit():
         n = self.pulledCount[chosen_arm]
         value = self.PercievedValues[chosen_arm]
         self.PercievedValues[chosen_arm] = ((n - 1) / n) * value + (1 / n) * reward
-
-arms = 3
-epsilon = 0.1
-iterations = 100
-rewards = [100.0, 200.0, 230.0]
-
-agent = MultiArmedBandit(3, epsilon)
-
-#print(np.random.randn(arms, iterations))
-print(f'before training = {agent.selectArm()}')
-
-for t in range(iterations):
-    arm = agent.selectArm()
-    reward = rewards[arm]
-    agent.update(arm,reward)
-
-print(f'after training = {agent.selectArm()}')

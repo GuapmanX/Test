@@ -44,6 +44,7 @@ for epoch in range(num_epochs):
 
 #plot
 predicted = model(X).detach().numpy()
+print(X_numpy,Y_numpy)
 plt.plot(X_numpy, Y_numpy, 'ro')
 plt.plot(X_numpy, predicted, 'b')
 plt.show()
