@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+#Thompson sampling
+
 class ThompsonSampling:
     def __init__(self, n_arms, tolerance):
         self.n_arms = n_arms

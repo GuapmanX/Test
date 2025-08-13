@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+#epsilonGreedy
+
 class MultiArmedBandit():
     def __init__(self,n_arms,epsilon):
         self.n_arms = n_arms
