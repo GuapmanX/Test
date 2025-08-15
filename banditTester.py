@@ -6,12 +6,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-n_arms = 100
+n_arms = 10
 iterations = 100
-rewards = np.random.randint(-10,100,n_arms)
+rewards = np.random.randint(0,100,n_arms)
 
 #thompson
-bayesian = ThompsonSampling(n_arms,90)
+bayesian = ThompsonSampling(n_arms,75)
 bayesian_wallet = 0.0
 bayesian_data = np.zeros(iterations)
 
