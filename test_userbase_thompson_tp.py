@@ -79,9 +79,16 @@ class User():
 class Userbase():
     def __init__(self,BaseAmount):
         self.Users = []
-        self.GeneralBanditData = np.array([1,1,1])
+
+        self.gSnF = [ #general successes and failiures (1st is success, 2nd is failiure)
+            [3,[np.ones(3),np.ones(3)]], [6,[np.ones(3),np.ones(3)]], [9,[np.ones(3),np.ones(3)]],
+            [12,[np.ones(3),np.ones(3)]], [15,[np.ones(3),np.ones(3)]], [18,[np.ones(3),np.ones(3)]],
+            [21,[np.ones(3),np.ones(3)]], [24,[np.ones(3),np.ones(3)]]
+        ]
+
         self.Successes = np.array([1,1,1])
         self.Failiures = np.array([1,1,1])
+
         for i in range(BaseAmount):
             self.register(False)
 
@@ -90,7 +97,11 @@ class Userbase():
 
         if(AddAverageData):
             self.recalculateAverageBandit()
-            value.BanditData = self.GeneralBanditData
+            #value.BanditData = self.GeneralBanditData
+            for i in range(len(self.gSnF)):
+                if(self.gSnF[i][0] > value.AccountAge):
+                    value.Successes = self.gSnF[i][1][0]
+                    value.Failiures = self.gSnF[i][1][1]
 
         self.Users.append(value)
         return len(self.Users) - 1
@@ -99,14 +110,26 @@ class Userbase():
         return len(self.Users)
 
     def recalculateAverageBandit(self):
-        TotalSucceses = np.array([0,0,0])
-        TotalFailiures = np.array([0,0,0])
+        NEWgSnF = [ #general successes and failiures (1st is success, 2nd is failiure)
+            [3,[np.ones(3),np.ones(3)], 1], [6,[np.ones(3),np.ones(3)], 1], [9,[np.ones(3),np.ones(3)], 1],
+            [12,[np.ones(3),np.ones(3)], 1], [15,[np.ones(3),np.ones(3)], 1], [18,[np.ones(3),np.ones(3)], 1],
+            [21,[np.ones(3),np.ones(3)], 1], [24,[np.ones(3),np.ones(3)], 1]
+        ]
+
         Users = self.userCount()
+
         for i in range(Users):
-            np.add(TotalSucceses,self.Users[i].Successes)
-            np.add(TotalFailiures,self.Users[i].Failiures)
-        self.Successes = TotalSucceses/Users
-        self.Failiures = TotalFailiures/Users
+            taste_idx = 0
+            for Z in range(len(NEWgSnF)):
+                if(NEWgSnF[Z][0] > self.Users[i].AccountAge):
+                    taste_idx = Z
+            NEWgSnF[taste_idx][1][0] += self.Users[i].Successes
+            NEWgSnF[taste_idx][1][1] += self.Users[i].Failiures
+            NEWgSnF[taste_idx][2] += 1
+
+            for i in range(len(self.gSnF)):
+                for z in range(len(self.gSnF[i][1])):
+                    self.gSnF[i][1][z] = np.round(NEWgSnF[i][1][z] / NEWgSnF[i][2])
 
 
 
