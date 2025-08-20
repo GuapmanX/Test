@@ -2,16 +2,29 @@ import numpy as np
 import random
 from detached_bandits.np_detached_bandit import MultiArmedBandit
 
+#TastePattern = [[6,[3.0,0.6,0.3]], [12,[1.0,4.0,0.3]], [24,[0.25,1.25,3.65]]] # months, pattern
+TastePattern = [
+    [3,np.random.randint(0,5,3)], [6,np.random.randint(0,5,3)], [9,np.random.randint(0,5,3)],
+    [12,np.random.randint(0,5,3)], [15,np.random.randint(0,5,3)], [18,np.random.randint(0,5,3)],
+    [21,np.random.randint(0,5,3)], [24,np.random.randint(0,5,3)]] # months, pattern
+
 
 class User():
     def __init__(self):
         self.Preferences = np.random.randint(1,100,3)
+        self.AccountAge = random.randint(0,50)
+
+        #makes the user's taste a bit more predictable, based on their account age
+        for i in range(len(TastePattern)):
+            if(TastePattern[i][0] > self.AccountAge):
+                    np.multiply(self.Preferences, TastePattern[i][1])
+
         self.BanditData = np.array([1,1,1])
         self.BanditPulls = np.array([0,0,0])
-        self.Preferences[self.Preferences.argmax()] *= 5 #user is more likely to pick what they like so this just balances it out
+        self.Preferences[self.Preferences.argmax()] *= 50 #user is more likely to pick what they like so this just balances it out
     
     def decide_email(self,email):
-        REJECTION_CONSTANT = 50
+        REJECTION_CONSTANT = 40
         return random.choices([0, 1], [REJECTION_CONSTANT , self.Preferences[email]], k=1)[0]
     
     def __clamp(self, n, min_value, max_value):
@@ -67,7 +80,13 @@ class User():
 class Userbase():
     def __init__(self,BaseAmount):
         self.Users = []
-        self.GeneralBanditData = np.array([1,1,1])
+        #self.GeneralBanditData = np.array([1,1,1])
+        self.GeneralBanditData = [
+            [3,[0.0,0.0,0.0]], [6,[0.0,0.0,0.0]], [9,[0.0,0.0,0.0]],
+            [12,[0.0,0.0,0.0]], [15,[0.0,0.0,0.0]], [18,[0.0,0.0,0.0]],
+            [21,[0.0,0.0,0.0]], [24,[0.0,0.0,0.0]]
+        ]
+
         for i in range(BaseAmount):
             self.register(False)
 
@@ -76,7 +95,11 @@ class Userbase():
 
         if(AddAverageData):
             self.recalculateAverageBandit()
-            value.BanditData = self.GeneralBanditData
+
+            #finds the best model based on account age
+            for i in range(len(self.GeneralBanditData)):
+                if(self.GeneralBanditData[i][0] > value.AccountAge):
+                    value.BanditData = self.GeneralBanditData[i][1]
 
         self.Users.append(value)
         return len(self.Users) - 1
@@ -85,17 +108,32 @@ class Userbase():
         return len(self.Users)
 
     def recalculateAverageBandit(self):
-        Total = np.array([1,1,1])
+        Total = [
+            [3,[0.0,0.0,0.0],1], [6,[0.0,0.0,0.0],1], [9,[0.0,0.0,0.0],1],
+            [12,[0.0,0.0,0.0],1], [15,[0.0,0.0,0.0],1], [18,[0.0,0.0,0.0],1],
+            [21,[0.0,0.0,0.0],1], [24,[0.0,0.0,0.0],1]
+        ] # months, pattern
         Users = self.userCount()
+
+        #splits newer and older user training models
         for i in range(Users):
-            np.add(Total,self.Users[i].BanditData)
-        self.GeneralBanditData = Total/Users
+            taste_idx = 0
+            for Z in range(len(Total)):
+                if(Total[Z][0] > self.Users[i].AccountAge):
+                    taste_idx = Z
+            Total[taste_idx][1] += self.Users[i].BanditData
+            Total[taste_idx][2] += 1
+
+        #calculates average bandit for the appropriate model
+        for i in range(len(self.GeneralBanditData)):
+            for z in range(len(self.GeneralBanditData[i][1])):
+                self.GeneralBanditData[i][1][z] = Total[i][1][z] / Total[i][2]
 
 
 
 base = Userbase(100)
 Agent = MultiArmedBandit(3,0.1)
-testIterations = 5
+testIterations = 50
     
 
 #training phase

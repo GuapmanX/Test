@@ -1,17 +1,29 @@
 import numpy as np
 import random
 from detached_bandits.np_detached_bandit import MultiArmedBandit
+from detached_bandits.np_detached_bandit_bayesian import ThompsonSampling
 
+TastePattern = [
+    [3,np.random.randint(0,5,3)], [6,np.random.randint(0,5,3)], [9,np.random.randint(0,5,3)],
+    [12,np.random.randint(0,5,3)], [15,np.random.randint(0,5,3)], [18,np.random.randint(0,5,3)],
+    [21,np.random.randint(0,5,3)], [24,np.random.randint(0,5,3)]] # months, pattern
 
 class User():
     def __init__(self):
         self.Preferences = np.random.randint(1,100,3)
-        self.BanditData = np.array([1,1,1])
-        self.BanditPulls = np.array([0,0,0])
-        self.Preferences[self.Preferences.argmax()] *= 5 #user is more likely to pick what they like so this just balances it out
+        self.Successes = np.ones(3)
+        self.Failiures = np.ones(3)
+        self.AccountAge = random.randint(0,50)
+
+        for i in range(len(TastePattern)):
+            if(TastePattern[i][0] > self.AccountAge):
+                np.multiply(self.Preferences, TastePattern[i][1])
+
+
+        self.Preferences[self.Preferences.argmax()] *= 50 #user is more likely to pick what they like so this just balances it out
     
     def decide_email(self,email):
-        REJECTION_CONSTANT = 50
+        REJECTION_CONSTANT = 40
         return random.choices([0, 1], [REJECTION_CONSTANT , self.Preferences[email]], k=1)[0]
     
     def __clamp(self, n, min_value, max_value):
@@ -68,6 +80,8 @@ class Userbase():
     def __init__(self,BaseAmount):
         self.Users = []
         self.GeneralBanditData = np.array([1,1,1])
+        self.Successes = np.array([1,1,1])
+        self.Failiures = np.array([1,1,1])
         for i in range(BaseAmount):
             self.register(False)
 
@@ -85,34 +99,37 @@ class Userbase():
         return len(self.Users)
 
     def recalculateAverageBandit(self):
-        Total = np.array([1,1,1])
+        TotalSucceses = np.array([0,0,0])
+        TotalFailiures = np.array([0,0,0])
         Users = self.userCount()
         for i in range(Users):
-            np.add(Total,self.Users[i].BanditData)
-        self.GeneralBanditData = Total/Users
+            np.add(TotalSucceses,self.Users[i].Successes)
+            np.add(TotalFailiures,self.Users[i].Failiures)
+        self.Successes = TotalSucceses/Users
+        self.Failiures = TotalFailiures/Users
 
 
 
 base = Userbase(100)
-Agent = MultiArmedBandit(3,0.1)
+Agent = ThompsonSampling(3,70)
 testIterations = 5
     
 
 #training phase
 for i in range(base.userCount()):
     for epoch in range(testIterations):
-        bandit_guess = Agent.selectArm(base.Users[i].BanditData)
+        bandit_guess = Agent.selectArm(base.Users[i].Successes, base.Users[i].Failiures)
 
 
         reward = base.Users[i].calculate_reward(bandit_guess)
-        base.Users[i].BanditData, base.Users[i].BanditPulls = Agent.update(bandit_guess, reward, base.Users[i].BanditData, base.Users[i].BanditPulls)
+        base.Users[i].Successes, base.Users[i].Failiures = Agent.update(bandit_guess, reward, base.Users[i].Successes, base.Users[i].Failiures)
 
 
 
 correct_guesses = 0
 #test phase
 for i in range(base.userCount()):
-        bandit_guess = Agent.selectArm(base.Users[i].BanditData)
+        bandit_guess = Agent.selectArm(base.Users[i].Successes, base.Users[i].Failiures)
         chose = base.Users[i].decide_email(bandit_guess)
         correct_guesses += chose
         
@@ -122,7 +139,7 @@ corret_newuser_guesses = 0
 #test for newly registered users
 for i in range(100):
     idx = base.register(True)
-    bandit_guess = Agent.selectArm(base.Users[idx].BanditData)
+    bandit_guess = Agent.selectArm(base.Users[idx].Successes, base.Users[idx].Failiures)
     chose = base.Users[idx].decide_email(bandit_guess)
     corret_newuser_guesses += chose
 
