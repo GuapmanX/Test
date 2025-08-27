@@ -114,7 +114,7 @@ class Userbase():
             [3,[np.ones(3),np.ones(3)], 1], [6,[np.ones(3),np.ones(3)], 1], [9,[np.ones(3),np.ones(3)], 1],
             [12,[np.ones(3),np.ones(3)], 1], [15,[np.ones(3),np.ones(3)], 1], [18,[np.ones(3),np.ones(3)], 1],
             [21,[np.ones(3),np.ones(3)], 1], [24,[np.ones(3),np.ones(3)], 1]
-        ]
+        ] #months, training data, instances of that account age
 
         Users = self.userCount()
 
