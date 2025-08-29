@@ -106,38 +106,72 @@ class User:
         EARNINGS_MULTIPLIER = 10
 
         return  Picked * PICKED_EMAIL_MULTIPLIER + WatchTime * WATCH_TIME_MULTIPLIER + Earnings * EARNINGS_MULTIPLIER
+    
+class Userbase():
+    def __init__(self,BaseAmount):
+        self.Users = []
+        self.GeneralBanditData = np.array([1,1,1])
+        self.Successes = np.array([1,1,1])
+        self.Failiures = np.array([1,1,1])
+        for i in range(BaseAmount):
+            self.register(False)
 
-        
+    def register(self, AddAverageData):
+        value = User()
+
+        if(AddAverageData):
+            self.recalculateAverageBandit()
+            value.BanditData = self.GeneralBanditData
+
+        self.Users.append(value)
+        return len(self.Users) - 1
+
+    def userCount(self):
+        return len(self.Users)
+
+    def recalculateAverageBandit(self):
+        TotalSucceses = np.array([0,0,0])
+        TotalFailiures = np.array([0,0,0])
+        Users = self.userCount()
+        for i in range(Users):
+            np.add(TotalSucceses,self.Users[i].Successes)
+            np.add(TotalFailiures,self.Users[i].Failiures)
+        self.Successes = TotalSucceses/Users
+        self.Failiures = TotalFailiures/Users
+
+
+users = Userbase(100)
 single_user = User()
 
 nl_picker = ThompsonSampling(2,24)
 email_picker = ThompsonSampling(3,70)
 
-training_iterations = 100
-testing_iterations = 100
+training_iterations = 10
+testing_iterations = 1
 
-
-for i in range(training_iterations):
-    guess = nl_picker.selectArm(single_user.newsl_type_successes,single_user.newsl_type_failiures)
-    newsl_reward = single_user.calculate_newsletter(guess)
-    single_user.newsl_type_successes, single_user.newsl_type_failiures = nl_picker.update(guess, newsl_reward, single_user.newsl_type_successes, single_user.newsl_type_failiures)
-    
-    #print(single_user.pNv_successes[guess],single_user.pNv_failiures[guess])
-    email_guess = email_picker.selectArm(single_user.pNv_successes[guess],single_user.pNv_failiures[guess])
-    content_reward = single_user.calculate_reward(newsl_reward, guess,email_guess)
-    single_user.pNv_successes[guess], single_user.pNv_failiures[guess] = email_picker.update(email_guess, content_reward, single_user.pNv_successes[guess], single_user.pNv_failiures[guess])
-    single_user.interest_shift(-5,5)
+for i in range(users.userCount()):
+    for i in range(training_iterations):
+        guess = nl_picker.selectArm(users.Users[i].newsl_type_successes,users.Users[i].newsl_type_failiures)
+        newsl_reward = users.Users[i].calculate_newsletter(guess)
+        users.Users[i].newsl_type_successes, users.Users[i].newsl_type_failiures = nl_picker.update(guess, newsl_reward, users.Users[i].newsl_type_successes, users.Users[i].newsl_type_failiures)
+        
+        #print(users.Users[i].pNv_successes[guess],users.Users[i].pNv_failiures[guess])
+        email_guess = email_picker.selectArm(users.Users[i].pNv_successes[guess],users.Users[i].pNv_failiures[guess])
+        content_reward = users.Users[i].calculate_reward(newsl_reward, guess,email_guess)
+        users.Users[i].pNv_successes[guess], users.Users[i].pNv_failiures[guess] = email_picker.update(email_guess, content_reward, users.Users[i].pNv_successes[guess], users.Users[i].pNv_failiures[guess])
+        users.Users[i].interest_shift(-5,5)
 
 
 
 #test phase
 Correct_nl_guesses = 0
-for i in range(testing_iterations):
-    guess = nl_picker.selectArm(single_user.newsl_type_successes,single_user.newsl_type_failiures)
-    newsl_reward = single_user.calculate_newsletter(guess)
+for i in range(users.userCount()):
+    for i in range(testing_iterations):
+        guess = nl_picker.selectArm(users.Users[i].newsl_type_successes,users.Users[i].newsl_type_failiures)
+        newsl_reward = users.Users[i].calculate_newsletter(guess)
 
-    email_guess = email_picker.selectArm(single_user.pNv_successes[guess],single_user.pNv_failiures[guess])
-    content_reward = single_user.decide_email(guess, newsl_reward, email_guess)
-    Correct_nl_guesses += content_reward
+        email_guess = email_picker.selectArm(users.Users[i].pNv_successes[guess],users.Users[i].pNv_failiures[guess])
+        content_reward = users.Users[i].decide_email(guess, newsl_reward, email_guess)
+        Correct_nl_guesses += content_reward
 
-print((Correct_nl_guesses/testing_iterations) * 100)
+print((Correct_nl_guesses/users.userCount()) * 100)
