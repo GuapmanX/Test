@@ -2,6 +2,8 @@ import numpy as np
 import random
 from detached_bandits.np_detached_bandit_bayesian import ThompsonSampling
 
+#this is with emails that vary
+
 class User:
     def __init__(self):
         #user's preferences
@@ -36,6 +38,36 @@ class User:
             np.ones(3, dtype=np.int32),
             np.ones(3, dtype=np.int32)
         ]
+        self.subtopic_succeses = [ #arr[newsletter][topic][subtopic]
+            [#photo newsletter
+            #photo topics
+                np.full_like(5,5, dtype=np.int32), #photo subtopics
+                np.full_like(5,5, dtype=np.int32),
+                np.full_like(5,5, dtype=np.int32)
+            ],
+            [#video newsletter
+            #video topics
+                np.full_like(5,5, dtype=np.int32), #video subtopics
+                np.full_like(5,5, dtype=np.int32),
+                np.full_like(5,5, dtype=np.int32)
+            ]
+        ]
+
+        self.subtopic_failiures = [ #arr[newsletter][topic][subtopic]
+            [#photo newsletter
+            #photo topics
+                np.ones(5, dtype=np.int32), #photo subtopics
+                np.ones(5, dtype=np.int32),
+                np.ones(5, dtype=np.int32)
+            ],
+            [#video newsletter
+            #video topics
+                np.ones(5, dtype=np.int32), #video subtopics
+                np.ones(5, dtype=np.int32),
+                np.ones(5, dtype=np.int32)
+            ]
+        ]
+        self.previous_subtopic = [-1,-1,-1]#newsletter,topic,subtopic
 
         self.account_age = 0
         self.days_since_refresh = 0
@@ -44,6 +76,15 @@ class User:
             np.ones(2), #successes
             np.ones(2) #failiures
         ]
+
+    def check_subtopic(self,nl,tp,stp):
+        if(self.previous_subtopic == [nl,tp,stp]): #checks if subtopic email has been picked before
+            self.previous_subtopic = [nl,tp,stp]
+            return False
+        else:
+            self.previous_subtopic = [nl,tp,stp]
+            return True
+
     #pros of wiping data once in a while
         #Counters very slow interest shifts
     #cons
@@ -126,10 +167,11 @@ class User:
 
         return Newsletter * PICKED_NEWSLETTER_MULTIPLIER
 
-    def calculate_reward(self, newsletter_success, newsletter, bandit_guess):
-        Picked = self.decide_email(newsletter, newsletter_success, bandit_guess)
-        WatchTime = self.watchtime(Picked, newsletter,bandit_guess)
-        Earnings = self.buysomething(Picked,WatchTime, newsletter,bandit_guess)
+    def calculate_reward(self, newsletter_success, newsletter_guess, email_guess):
+        Picked = self.decide_email(newsletter_guess, newsletter_success, email_guess)
+        WatchTime = self.watchtime(Picked, newsletter_guess,email_guess)
+        Earnings = self.buysomething(Picked,WatchTime, newsletter_guess,email_guess)
+        #subtopic_reward = self.check_subtopic(guess,email_guess,subtopic_guess)
 
         PICKED_EMAIL_MULTIPLIER = 50
         WATCH_TIME_MULTIPLIER = 3
@@ -175,21 +217,50 @@ single_user = User()
 
 nl_picker = ThompsonSampling(2,24)
 email_picker = ThompsonSampling(3,70)
+subtopic_picker = ThompsonSampling(5,999)#value is ridicoulosly high to make sure each pick fails, so it wont get picked again for a while
 
 training_iterations = 10
 testing_iterations = 1
 
 for i in range(users.userCount()):
     for i in range(training_iterations):
+        #self = users.Users[i]
+
         users.Users[i].passby()
         guess = nl_picker.selectArm(*users.Users[i].get_bandit_data())
         newsl_reward = users.Users[i].calculate_newsletter(guess)
-        users.Users[i].newsl_type_successes, users.Users[i].newsl_type_failiures = nl_picker.update(guess, newsl_reward, users.Users[i].newsl_type_successes, users.Users[i].newsl_type_failiures)
+        users.Users[i].newsl_type_successes, users.Users[i].newsl_type_failiures = nl_picker.update(
+            guess,
+            newsl_reward, 
+            users.Users[i].newsl_type_successes, 
+            users.Users[i].newsl_type_failiures
+        )
         
         #print(users.Users[i].pNv_successes[guess],users.Users[i].pNv_failiures[guess])
         email_guess = email_picker.selectArm(users.Users[i].pNv_successes[guess],users.Users[i].pNv_failiures[guess])
+
         content_reward = users.Users[i].calculate_reward(newsl_reward, guess,email_guess)
-        users.Users[i].pNv_successes[guess], users.Users[i].pNv_failiures[guess] = email_picker.update(email_guess, content_reward, users.Users[i].pNv_successes[guess], users.Users[i].pNv_failiures[guess])
+        users.Users[i].pNv_successes[guess], users.Users[i].pNv_failiures[guess] = email_picker.update(
+            email_guess,
+            content_reward,
+            users.Users[i].pNv_successes[guess],
+            users.Users[i].pNv_failiures[guess]
+        )
+
+
+        subtopic_guess = subtopic_picker.selectArm(users.Users[i].subtopic_succeses[guess][email_guess],users.Users[i].subtopic_failiures[guess][email_guess])
+        print(subtopic_guess)
+        subtopic_reward = users.Users[i].check_subtopic(guess,email_guess,subtopic_guess)
+        users.Users[i].subtopic_succeses[guess][email_guess],users.Users[i].subtopic_failiures[guess][email_guess] = subtopic_picker.update(
+            subtopic_guess,
+            subtopic_reward,
+            users.Users[i].subtopic_succeses[guess][email_guess],
+            users.Users[i].subtopic_failiures[guess][email_guess]
+        )
+
+
+
+
         users.Users[i].interest_shift(-10,10)
 
 
